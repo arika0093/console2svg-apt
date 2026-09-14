@@ -9,19 +9,14 @@ on:
 
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
+  group: apt-publish
   cancel-in-progress: true
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - uses: actions/checkout@v4
@@ -29,28 +24,45 @@ jobs:
       - name: Install repository tools
         run: sudo apt-get update && sudo apt-get install -y apt-utils
 
-      - name: Download latest stable packages
+      - name: Read latest stable release
         id: release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          release=$(curl -fsSL \
+          curl -fsSL \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${GH_TOKEN}" \
-            https://api.github.com/repos/arika0093/console2svg/releases/latest)
+            https://api.github.com/repos/arika0093/console2svg/releases/latest \
+            -o release.json
 
-          tag=$(jq -r '.tag_name' <<<"$release")
+          tag=$(jq -r '.tag_name' release.json)
           version=${tag#v}
+          publish=true
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]] \
+            && [[ -f .latest-version ]] \
+            && [[ "$(cat .latest-version)" == "$version" ]]; then
+            publish=false
+          fi
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+
+      - name: Download latest stable packages
+        if: steps.release.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='${{ steps.release.outputs.version }}'
           rm -rf site
           mkdir -p site/pool/main/c/console2svg/amd64 site/pool/main/c/console2svg/arm64
 
           fetch_asset() {
             local asset_name=$1 expected_arch=$2 destination=$3
             local url digest sha
-            url=$(jq -r --arg name "$asset_name" '.assets[] | select(.name == $name) | .browser_download_url // empty' <<<"$release")
-            digest=$(jq -r --arg name "$asset_name" '.assets[] | select(.name == $name) | .digest // empty' <<<"$release")
+            url=$(jq -r --arg name "$asset_name" '.assets[] | select(.name == $name) | .browser_download_url // empty' release.json)
+            digest=$(jq -r --arg name "$asset_name" '.assets[] | select(.name == $name) | .digest // empty' release.json)
             test -n "$url"
 
             curl -fsSL "$url" -o "$destination"
@@ -72,9 +84,8 @@ jobs:
             arm64 \
             "site/pool/main/c/console2svg/arm64/console2svg_${version}_arm64.deb"
 
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-
       - name: Build APT metadata
+        if: steps.release.outputs.publish == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -99,27 +110,26 @@ jobs:
             -o APT::FTPArchive::Release::Description="Official console2svg APT repository" \
             release dists/stable > dists/stable/Release
 
-          touch .nojekyll
-          cat > index.html <<'HTML'
-          <!doctype html>
-          <meta charset="utf-8">
-          <title>console2svg APT repository</title>
-          <h1>console2svg APT repository</h1>
-          <p><code>deb [trusted=yes] https://arika0093.github.io/console2svg-apt stable main</code></p>
-          <p><a href="https://github.com/arika0093/console2svg">console2svg on GitHub</a></p>
-          HTML
+          echo '${{ steps.release.outputs.version }}' > .version
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Publish APT branch
+        if: steps.release.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          publish_dir=$(mktemp -d)
+          cp -a site/. "$publish_dir/"
 
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
-        with:
-          path: site
-
-      - name: Deploy GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout --orphan apt-publish
+          git rm -rf . >/dev/null 2>&1 || true
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a "$publish_dir/." .
+          git add -A
+          git commit -m "Publish console2svg ${{ steps.release.outputs.version }}"
+          git push --force origin HEAD:apt
+          git checkout -f main
 
       - name: Record synchronized version
         shell: bash
@@ -138,4 +148,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: sync console2svg ${{ steps.release.outputs.version }}"
-          git push
+          git push origin main
