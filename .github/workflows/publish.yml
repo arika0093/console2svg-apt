@@ -131,6 +131,18 @@ jobs:
           git push --force origin HEAD:apt
           git checkout -f main
 
+      - name: Test published APT repository
+        if: steps.release.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'deb [trusted=yes] https://raw.githubusercontent.com/arika0093/console2svg-apt/apt stable main' \
+            | sudo tee /etc/apt/sources.list.d/console2svg.list
+          sudo apt-get update
+          sudo apt-get install -y console2svg
+          console2svg capture -o /tmp/console2svg-apt-test.svg -- /usr/bin/printf hello
+          grep 'hello' /tmp/console2svg-apt-test.svg >/dev/null
+
       - name: Record synchronized version
         shell: bash
         run: |
