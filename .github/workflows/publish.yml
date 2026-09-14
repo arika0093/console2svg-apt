@@ -1,6 +1,8 @@
 name: Publish APT repository
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '23 * * * *'
