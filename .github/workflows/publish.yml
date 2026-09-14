@@ -1,0 +1,139 @@
+name: Publish APT repository
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 * * * *'
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install repository tools
+        run: sudo apt-get update && sudo apt-get install -y apt-utils
+
+      - name: Download latest stable packages
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          release=$(curl -fsSL \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            https://api.github.com/repos/arika0093/console2svg/releases/latest)
+
+          tag=$(jq -r '.tag_name' <<<"$release")
+          version=${tag#v}
+          rm -rf site
+          mkdir -p site/pool/main/c/console2svg/amd64 site/pool/main/c/console2svg/arm64
+
+          fetch_asset() {
+            local asset_name=$1 expected_arch=$2 destination=$3
+            local url digest sha
+            url=$(jq -r --arg name "$asset_name" '.assets[] | select(.name == $name) | .browser_download_url // empty' <<<"$release")
+            digest=$(jq -r --arg name "$asset_name" '.assets[] | select(.name == $name) | .digest // empty' <<<"$release")
+            test -n "$url"
+
+            curl -fsSL "$url" -o "$destination"
+            if [[ "$digest" == sha256:* ]]; then
+              sha=${digest#sha256:}
+              echo "$sha  $destination" | sha256sum -c -
+            fi
+
+            test "$(dpkg-deb -f "$destination" Package)" = "console2svg"
+            test "$(dpkg-deb -f "$destination" Architecture)" = "$expected_arch"
+          }
+
+          fetch_asset \
+            console2svg.x64.deb \
+            amd64 \
+            "site/pool/main/c/console2svg/amd64/console2svg_${version}_amd64.deb"
+          fetch_asset \
+            console2svg.arm64.deb \
+            arm64 \
+            "site/pool/main/c/console2svg/arm64/console2svg_${version}_arm64.deb"
+
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Build APT metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd site
+          mkdir -p dists/stable/main/binary-amd64 dists/stable/main/binary-arm64
+
+          apt-ftparchive packages pool/main/c/console2svg/amd64 \
+            > dists/stable/main/binary-amd64/Packages
+          gzip -9fk dists/stable/main/binary-amd64/Packages
+
+          apt-ftparchive packages pool/main/c/console2svg/arm64 \
+            > dists/stable/main/binary-arm64/Packages
+          gzip -9fk dists/stable/main/binary-arm64/Packages
+
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin="console2svg" \
+            -o APT::FTPArchive::Release::Label="console2svg" \
+            -o APT::FTPArchive::Release::Suite="stable" \
+            -o APT::FTPArchive::Release::Codename="stable" \
+            -o APT::FTPArchive::Release::Architectures="amd64 arm64" \
+            -o APT::FTPArchive::Release::Components="main" \
+            -o APT::FTPArchive::Release::Description="Official console2svg APT repository" \
+            release dists/stable > dists/stable/Release
+
+          touch .nojekyll
+          cat > index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>console2svg APT repository</title>
+          <h1>console2svg APT repository</h1>
+          <p><code>deb [trusted=yes] https://arika0093.github.io/console2svg-apt stable main</code></p>
+          <p><a href="https://github.com/arika0093/console2svg">console2svg on GitHub</a></p>
+          HTML
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Record synchronized version
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${{ steps.release.outputs.version }}" > .latest-version
+          if [[ "$(date -u +%d)" == "01" ]]; then
+            date -u +%Y-%m > .sync-heartbeat
+          fi
+
+          git add .latest-version .sync-heartbeat 2>/dev/null || git add .latest-version
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: sync console2svg ${{ steps.release.outputs.version }}"
+          git push
