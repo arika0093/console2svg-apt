@@ -1,0 +1,18 @@
+Package: console2svg
+Architecture: amd64
+Version: 0.10.1-1.fbb41dcb22
+Priority: optional
+Section: default
+Maintainer: <runner@runnervmlun5p>
+Installed-Size: 19637
+Filename: pool/main/c/console2svg/amd64/console2svg_0.10.1_amd64.deb
+Size: 8858802
+MD5sum: 76761220d1a484e7c45dd46adb453195
+SHA1: 3fec7128b76a8da6310665f82f956ee124a71cfb
+SHA256: 92cd2e4e22d0f375bb287a4995b723129a521fd13d103eb50dafcfb38bbe9036
+SHA512: eae1ca8aa0eb801b1fce80d1687c4f7c97e23a299a3f39ef98ae6781ff84283734f849277c2c158de37e5f14aaed7d7a94801b9ad644540abba78769f8dd0bcc
+Homepage: https://github.com/arika0093/console2svg
+Description: Convert terminal output to SVG images.
+License: Apache-2.0
+Vendor: none
+
