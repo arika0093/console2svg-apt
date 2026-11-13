@@ -1,0 +1,32 @@
+Architectures: amd64 arm64
+Codename: stable
+Components: main
+Date: Fri, 13 Nov 2026 09:43:45 +0000
+Description: Official console2svg APT repository
+Label: console2svg
+Origin: console2svg
+Suite: stable
+MD5Sum:
+ e9f86f015f74ce7cec803755cc77bb96              201 Release
+ ac4ba7ff93498542ce93e4260d39a41a              681 main/binary-amd64/Packages
+ 8c090a7f3de69395c44394ef45e383ec              493 main/binary-amd64/Packages.gz
+ 0fcb9f34d803120c359868bdf5ebf953              681 main/binary-arm64/Packages
+ c543d19772fd60aea3e4ace0910346de              491 main/binary-arm64/Packages.gz
+SHA1:
+ ba78f166c14a4a8838de0943f23f0db4aa36392e              201 Release
+ 0a2161105d90bd078fdc26780aa9ac43f3c50c39              681 main/binary-amd64/Packages
+ 47540b7a9d805a5fb7a01e5c7dd0a876d2957b51              493 main/binary-amd64/Packages.gz
+ 508d759b47908531ed2d5f70e3ba5e8365167eb3              681 main/binary-arm64/Packages
+ 3dacdedf7359a01d7b7b68a30533ddbbe155e682              491 main/binary-arm64/Packages.gz
+SHA256:
+ dddbb703d90ee41f5c762095b9c2d403f8a9a454ee11cd299bb69ba4ecb69b32              201 Release
+ 70e2549c204da3434f9cbcffdcac32d903fae0148039ab2c683a54f2c362ac66              681 main/binary-amd64/Packages
+ 08c9cc2cefb0b2eac3ce0c2015e42a8dacb26265045b71c6fb2a49574f1b0ece              493 main/binary-amd64/Packages.gz
+ b126c6ec81dfd0d3c018a577876599eb912a854e1393f0af5363833c55aaf67b              681 main/binary-arm64/Packages
+ 31591b6410b9a1541d89ad7af0a73becf586157ca6f2c15c1a3d9a358ff39f75              491 main/binary-arm64/Packages.gz
+SHA512:
+ ac6291c4c167e3d38745775412315f6660d0374f8e16ddcdbc84019c341229b9eb3fe6e0432f243deff492e6a219b7c71143d6d8a65fc435c3d8b2d4ddec4231              201 Release
+ 652ec2a498071c2479d2176f09e302004a1d5a820510b69a458f90cf741da74c7ddda91f50f5b2300192f9288545cdcdf4960fd3b8ec4a18bb05cdb61d14c192              681 main/binary-amd64/Packages
+ 19022990ead6bd880bd27d19815714760ea1289f7aa6aea27008e0472feeb31471c98eaa99bb12b89194ff9e19f11458d95171be98a2e1dbbddc19733140e1ee              493 main/binary-amd64/Packages.gz
+ c30ffaca3fcb65446a9258d3f3a32ad62ac5038743341b5fe59d5f42833740dd220f0c3f73c1dd256875813a6b12d40a16653b33faa12bb87a2f68a0c07a4975              681 main/binary-arm64/Packages
+ bf82cc6e8af0ef5f71736460f2248fce2638e98a457321f288db022ad8caeeb32211701746d521101346b69fb92d42020986826e17786b4a84e773f0cc64af48              491 main/binary-arm64/Packages.gz
